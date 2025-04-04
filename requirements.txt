@@ -1,0 +1,5 @@
+transformers
+haystack
+faiss-cpu
+streamlit
+torch
