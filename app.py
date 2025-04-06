@@ -157,7 +157,7 @@ custom_css = """
 
 # Page configuration
 st.set_page_config(
-    page_title="Legal Assistant Pro",
+    page_title="Saul Botman",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -182,7 +182,7 @@ try:
                     <p style="color: #e0e0e0; font-size: 1.2rem;">Did you know that you have rights? The Constitution says you do. And so do I.</p>
                 </div>
                 <div class="header-image">
-                    <img src="data:image/jpeg;base64,{encoded_image}" alt="Legal Assistant">
+                    <img src="data:image/jpeg;base64,{encoded_image}" alt="Saul Goodman">
                 </div>
             </div>
         """, unsafe_allow_html=True)
