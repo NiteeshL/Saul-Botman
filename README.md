@@ -4,7 +4,7 @@
 
 # Saul Botman ⚖️
 
-A sophisticated legal assistant powered by Streamlit and LLM technology, designed to provide accurate information about the Indian Penal Code (IPC). The chatbot leverages the Groq LLM and Google's Generative AI embeddings to deliver precise legal insights.
+A sophisticated legal assistant inspired by Better Call Saul utilizing RAG architecture, advanced language models and embeddings to retrieve and generate contextually relevant answers from a provided legal document corpus designed to provide accurate information about the Indian Penal Code (IPC).
 
 **🔥 Try it now: [Saul Botman Live](https://saul-botman.streamlit.app/)**
 
