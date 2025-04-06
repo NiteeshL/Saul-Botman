@@ -152,6 +152,24 @@ custom_css = """
     /* Hide default elements */
     #MainMenu, footer, .stDeployButton, #stDecoration {display: none;}
     button[title="View fullscreen"] {display: none;}
+    
+    /* Legal disclaimer styling */
+    .legal-disclaimer {
+        background-color: rgba(218, 34, 37, 0.1);
+        border-left: 4px solid var(--secondary-color);
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+    }
+    
+    .warning-message {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 5px 0;
+        border: 1px solid #ffeeba;
+    }
 </style>
 """
 
@@ -189,6 +207,23 @@ try:
 except Exception as e:
     st.error(f"Unable to load image: {e}")
 
+# Add disclaimer before chat interface
+disclaimer_text = """
+<div class="legal-disclaimer">
+    <h4>⚠️ Legal Information Disclaimer</h4>
+    <p>This chatbot provides general legal information, NOT legal advice. The information provided:</p>
+    <ul>
+        <li>Is for informational purposes only</li>
+        <li>Is not a substitute for professional legal counsel</li>
+        <li>May not be up-to-date or applicable to your jurisdiction</li>
+        <li>Should not be relied upon for making legal decisions</li>
+    </ul>
+    <p><strong>Please consult with a qualified attorney for specific legal advice.</strong></p>
+</div>
+"""
+
+st.markdown(disclaimer_text, unsafe_allow_html=True)
+
 # Reset conversation function
 def reset_conversation():
     st.session_state.messages = []
@@ -207,7 +242,18 @@ db_retriever = db.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
 # Define the prompt template
 prompt_template = """
-<s>[INST]This is a chat template and As a legal chat bot , your primary objective is to provide accurate and concise information based on the user's questions. Do not generate your own questions and answers. You will adhere strictly to the instructions provided, offering relevant context from the knowledge base while avoiding unnecessary details. Your responses will be brief, to the point, and in compliance with the established format. If a question falls outside the given context, you will refrain from utilizing the chat history and instead rely on your own knowledge base to generate an appropriate response. You will prioritize the user's query and refrain from posing additional questions. The aim is to deliver professional, precise, and contextually relevant information pertaining to the Indian Penal Code.
+<s>[INST]You are a legal information chatbot with strict limitations. Follow these guidelines:
+
+1. NEVER provide specific legal advice
+2. If the question seeks specific legal advice or involves complex legal matters, respond with a warning to seek professional legal counsel
+3. Only provide publicly available legal information with proper citations
+4. Use clear qualifying language (e.g., "generally," "typically," "it may depend")
+5. If unsure, explicitly state the limitations of the information
+6. For questions about:
+   - Ongoing legal proceedings: Decline to comment
+   - Specific legal strategy: Refer to an attorney
+   - Complex legal interpretation: Emphasize need for professional counsel
+
 CONTEXT: {context}
 CHAT HISTORY: {chat_history}
 QUESTION: {question}
@@ -236,7 +282,19 @@ for message in st.session_state.messages:
         message.get("role"),
         avatar="👤" if message.get("role") == "user" else "⚖️"
     ):
-        st.write(message.get("content"))
+        content = message.get("content")
+        # Split content into main response and sources if sources exist
+        if "Sources:" in content:
+            main_content, sources = content.split("Sources:", 1)
+            st.write(main_content)
+            st.markdown("**Sources:**" + sources)
+        else:
+            st.write(content)
+
+# Function to check for risky content
+def check_for_risky_content(response):
+    risky_keywords = ['you should', 'I advise', 'you must', 'definitely', 'always', 'never']
+    return any(keyword in response.lower() for keyword in risky_keywords)
 
 # Chat input with custom styling
 input_prompt = st.chat_input("Ask your legal question...")
@@ -250,10 +308,21 @@ if input_prompt:
     with st.chat_message("assistant", avatar="⚖️"):
         with st.status("Analyzing your question...", expanded=True):
             result = qa.invoke(input=input_prompt)
+            response_text = result["answer"]
+            
+            # Check for risky content
+            if check_for_risky_content(response_text):
+                st.markdown("""
+                    <div class="warning-message">
+                        ⚠️ This response may contain general guidance. Please consult with a qualified attorney for specific advice.
+                    </div>
+                """, unsafe_allow_html=True)
+        
+            
+            # Display response
             message_placeholder = st.empty()
             full_response = ""
-            
-            for chunk in result["answer"]:
+            for chunk in response_text:
                 full_response += chunk
                 time.sleep(0.02)
                 message_placeholder.markdown(full_response + " ▌")
@@ -262,6 +331,6 @@ if input_prompt:
         with col2:
             st.button('🗑️ Clear Chat', on_click=reset_conversation, key="clear_chat", help="Clear the conversation history", type="secondary", use_container_width=True)
 
-    st.session_state.messages.append({"role": "assistant", "content": result["answer"]})
+    st.session_state.messages.append({"role": "assistant", "content": response_text})
 
 st.markdown('</div>', unsafe_allow_html=True)
