@@ -64,6 +64,8 @@ The system processes Indian Penal Code documents through the following pipeline:
 3. Text chunks are embedded using Google's Generative AI
 4. Embeddings are stored in a FAISS vector database for efficient retrieval
 
+**Note**: You can expand the knowledge base by adding more PDF documents to the `legal_documents` folder. After adding new documents, simply run `python data_ingestion.py` again to update the vector database with the new content.
+
 ## Usage 💡
 
 1. Place your IPC documents in the `legal_documents` directory
