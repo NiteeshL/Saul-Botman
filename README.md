@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0a06cecb-6866-4bfb-bb86-cdd43d85cd52" alt="image" />
+</p>
+
 # Saul Botman ⚖️
 
 A sophisticated legal assistant powered by Streamlit and LLM technology, designed to provide accurate information about the Indian Penal Code (IPC). The chatbot leverages the Groq LLM and Google's Generative AI embeddings to deliver precise legal insights.
