@@ -1,6 +1,8 @@
 import streamlit as st
 import os
 import time
+import base64
+from PIL import Image
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.prompts import PromptTemplate
@@ -17,29 +19,63 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 # Custom color scheme and styling
 custom_css = """
 <style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+    
     /* Main theme colors */
     :root {
-        --primary-color: #2d3250;
-        --secondary-color: #424769;
-        --accent-color: #676f9d;
+        --primary-color: #f7d31e;
+        --secondary-color: #da2225;
+        --accent-color: #b06a42;
         --text-color: #ffffff;
-        --chat-bg: #f5f5f5;
+        --chat-bg: var(--accent-color);
     }
     
-    /* Page styling */
+    /* Page styling - removing background color overrides */
     .main {
-        background-color: var(--primary-color);
+        color: var(--text-color);
+    .stApp {
+        color: var(--text-color);
+    }
+
+    }
+
+    .stApp {
         color: var(--text-color);
     }
     
     /* Header styling */
     .header-container {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        background: var(--accent-color);
+        color: var(--text-color);
         padding: 2rem;
         border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         margin-bottom: 2rem;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .header-text h1, .header-text p {
+        color: var(--text-color) !important;
+    }
+    
+    .header-image {
+        flex-shrink: 0;
+    }
+    
+    .header-image img {
+        max-width: 300px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+
+    
+    .dancing-script {
+        font-size: 60px;
+        font-family: 'Dancing Script', cursive !important;
     }
     
     /* Chat container styling */
@@ -55,7 +91,13 @@ custom_css = """
         border-radius: 15px;
         padding: 15px;
         margin: 10px 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        color: var(--text-color);
+    }
+    
+    /* Make message text white */
+    .stChatMessage p {
+        color: var(--text-color) !important;
     }
     
     /* Input box styling */
@@ -68,8 +110,8 @@ custom_css = """
     
     /* Button styling */
     div.stButton > button:first-child {
-        background-color: var(--accent-color);
-        color: white;
+        background-color: var(--secondary-color);
+        color: var(--text-color);
         border-radius: 25px;
         padding: 0.5rem 2rem;
         border: none;
@@ -78,7 +120,7 @@ custom_css = """
     }
     
     div.stButton > button:hover {
-        background-color: var(--secondary-color);
+        background-color: var(--accent-color);
         transform: translateY(-2px);
     }
     
@@ -124,12 +166,28 @@ st.set_page_config(
 st.markdown(custom_css, unsafe_allow_html=True)
 
 # Header section
-st.markdown("""
-    <div class="header-container">
-        <h1 style="color: white; font-size: 2.5rem;">Legal Assistant Pro</h1>
-        <p style="color: #e0e0e0; font-size: 1.2rem;">Your AI-Powered Legal Companion</p>
-    </div>
-""", unsafe_allow_html=True)
+try:
+    image_path = "saul.jpg"
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as f:
+            image_data = f.read()
+            encoded_image = base64.b64encode(image_data).decode()
+            
+        st.markdown(f"""
+            <div class="header-container">
+                <div class="header-text">
+                    <h1 style="color: white; font-size: 2.5rem;">
+                        <span class="dancing-script">Better Call Bot!</span>
+                    </h1>
+                    <p style="color: #e0e0e0; font-size: 1.2rem;">Did you know that you have rights? The Constitution says you do. And so do I.</p>
+                </div>
+                <div class="header-image">
+                    <img src="data:image/jpeg;base64,{encoded_image}" alt="Legal Assistant">
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Unable to load image: {e}")
 
 # Reset conversation function
 def reset_conversation():
