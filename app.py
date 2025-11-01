@@ -4,16 +4,15 @@ import time
 import base64
 from PIL import Image
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain.prompts import PromptTemplate
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
-from langchain.memory import ConversationBufferWindowMemory
-from langchain.chains import ConversationalRetrievalChain
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.chat_history import InMemoryChatMessageHistory
 from dotenv import load_dotenv
 
 # Set up environment variables
 load_dotenv()
-os.environ['GOOGLE_API_KEY'] = os.getenv("GOOGLE_API_KEY")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
 # Custom color scheme and styling
@@ -227,16 +226,21 @@ st.markdown(disclaimer_text, unsafe_allow_html=True)
 # Reset conversation function
 def reset_conversation():
     st.session_state.messages = []
-    st.session_state.memory.clear()
+    st.session_state.chat_history.clear()
 
+# Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "memory" not in st.session_state:
-    st.session_state.memory = ConversationBufferWindowMemory(k=2, memory_key="chat_history", return_messages=True)
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = InMemoryChatMessageHistory()
 
 # Initialize embeddings and vector store
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_kwargs={'device': 'cpu'},
+    encode_kwargs={'normalize_embeddings': True}
+)
 db = FAISS.load_local("vector_db", embeddings, allow_dangerous_deserialization=True)
 db_retriever = db.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
@@ -263,15 +267,18 @@ ANSWER:
 prompt = PromptTemplate(template=prompt_template, input_variables=['context', 'question', 'chat_history'])
 
 # Initialize the LLM
-llm = ChatGroq(groq_api_key=groq_api_key, model_name="llama3-70b-8192")
-
-# Set up the QA chain
-qa = ConversationalRetrievalChain.from_llm(
-    llm=llm,
-    memory=st.session_state.memory,
-    retriever=db_retriever,
-    combine_docs_chain_kwargs={'prompt': prompt}
-)
+llm = ChatGroq(groq_api_key=groq_api_key, model_name="llama-3.3-70b-versatile")
+	
+# Helper function to format chat history
+def format_chat_history():
+    history_text = ""
+    messages = st.session_state.chat_history.messages
+    for msg in messages[-4:]:  # Last 2 exchanges (4 messages)
+        if isinstance(msg, HumanMessage):
+            history_text += f"Human: {msg.content}\n"
+        elif isinstance(msg, AIMessage):
+            history_text += f"Assistant: {msg.content}\n"
+    return history_text
 
 # Chat interface
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
@@ -304,11 +311,29 @@ if input_prompt:
         st.write(input_prompt)
 
     st.session_state.messages.append({"role": "user", "content": input_prompt})
+    st.session_state.chat_history.add_user_message(input_prompt)
 
     with st.chat_message("assistant", avatar="⚖️"):
         with st.status("Analyzing your question...", expanded=True):
-            result = qa.invoke(input=input_prompt)
-            response_text = result["answer"]
+            # Retrieve relevant documents
+            docs = db_retriever.invoke(input_prompt)
+            
+            # Format context from documents
+            context = "\n\n".join([doc.page_content for doc in docs])
+            
+            # Format chat history
+            chat_history_text = format_chat_history()
+            
+            # Create the prompt
+            formatted_prompt = prompt.format(
+                context=context,
+                question=input_prompt,
+                chat_history=chat_history_text
+            )
+            
+            # Get response from LLM
+            response = llm.invoke(formatted_prompt)
+            response_text = response.content
             
             # Check for risky content
             if check_for_risky_content(response_text):
@@ -319,18 +344,20 @@ if input_prompt:
                 """, unsafe_allow_html=True)
         
             
-            # Display response
+            # Display response with typing effect
             message_placeholder = st.empty()
             full_response = ""
             for chunk in response_text:
                 full_response += chunk
                 time.sleep(0.02)
                 message_placeholder.markdown(full_response + " ▌")
+            message_placeholder.markdown(full_response)
             
         col1, col2, col3 = st.columns([4, 1, 4])
         with col2:
             st.button('🗑️ Clear Chat', on_click=reset_conversation, key="clear_chat", help="Clear the conversation history", type="secondary", use_container_width=True)
 
     st.session_state.messages.append({"role": "assistant", "content": response_text})
+    st.session_state.chat_history.add_ai_message(response_text)
 
 st.markdown('</div>', unsafe_allow_html=True)
