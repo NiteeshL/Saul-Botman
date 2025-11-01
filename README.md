@@ -92,21 +92,21 @@ The application will open in your default web browser at `http://localhost:8501`
 
 ```mermaid
 flowchart TD
-  subgraph Offline_Data_Ingestion
+  subgraph Offline Data Ingestion
     A[PDFs in legal_documents] --> B[PyPDFDirectoryLoader]
-    B --> C[RecursiveCharacterTextSplitter<br/>(chunk=1000, overlap=200)]
-    C --> D[HuggingFaceEmbeddings<br/>all-MiniLM-L6-v2]
+    B --> C[RecursiveCharacterTextSplitter - chunk 1000, overlap 200]
+    C --> D[HuggingFaceEmbeddings - all-MiniLM-L6-v2]
     D --> E[FAISS index]
     E --> F[vector_db on disk]
   end
 
-  subgraph Online_Query
-    U[User (Streamlit UI)] --> Q[Question]
-    Q --> R[FAISS Retriever (k=4)]
+  subgraph Online Query
+    U[User - Streamlit UI] --> Q[Question]
+    Q --> R[FAISS Retriever - k 4]
     R --> Ctx[Top-k Context]
     Hist[InMemoryChatMessageHistory] --> P
-    Ctx --> P[PromptTemplate<br/>context + chat history + question]
-    P --> LLM[Groq Chat LLM<br/>llama-3.3-70b-versatile]
+    Ctx --> P[PromptTemplate - context + chat history + question]
+    P --> LLM[Groq Chat LLM - llama-3.3-70b-versatile]
     LLM --> Ans[Answer]
     Ans --> UI[Render with typing effect]
     Clear[Clear Chat] -.-> Hist
